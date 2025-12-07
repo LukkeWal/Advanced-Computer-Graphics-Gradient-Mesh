@@ -14,8 +14,8 @@ void MainView::initializeGL()
   meshRenderer.initializeShader();
   meshRenderer.initializeGL();
   m_mesh = Mesh();
-  m_mesh.setBasicTestMesh();
-  //m_mesh.setPaperTestMesh();
+  //m_mesh.setBasicTestMesh();
+  m_mesh.setPaperTestMesh();
   meshRenderer.setMesh(m_mesh);
 }
 

@@ -1,4 +1,5 @@
 #include <array>
+#include <QDebug>
 
 #include "basicdatatypes.h"
 
@@ -9,6 +10,7 @@ struct ControlPoint{
   ColorRGB uColTangent;
   ColorRGB vColTangent;
   ColorRGB col;
+  QString print();
 };
 
 struct DrawPoint{

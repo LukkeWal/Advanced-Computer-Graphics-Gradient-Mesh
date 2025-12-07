@@ -171,6 +171,14 @@ void renderer::buildPatchMesh()
   const int resU = 40;
   const int resV = 40;
 
+  for (int c = 0; c < mesh.cols(); ++c)
+  {
+    for (int r = 0; r < mesh.rows(); ++r)
+    {
+      qDebug() << "P: " << mesh.points[r][c].print();
+    }
+  }
+
   std::vector<Vertex> vertices;
 
   std::vector<GradientPatch> patches = mesh.calculatePatches();

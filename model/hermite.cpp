@@ -1,5 +1,24 @@
 #include "hermite.h"
 
+QString ControlPoint::print()
+{
+  return QString(
+             "ControlPoint("
+             "pos=(%1,%2), "
+             "uPosTangent=(%3,%4), "
+             "vPosTangent=(%5,%6), "
+             "uColTangent=(%10,%11,%12), "
+             "vColTangent=(%13,%14,%15), "
+             "col=(%7,%8,%9)"
+             ")"
+             ).arg(pos.x).arg(pos.y)
+      .arg(uPosTangent.x).arg(uPosTangent.y)
+      .arg(vPosTangent.x).arg(vPosTangent.y)
+      .arg(col.r).arg(col.g).arg(col.b)
+      .arg(uColTangent.r).arg(uColTangent.g).arg(uColTangent.b)
+      .arg(vColTangent.r).arg(vColTangent.g).arg(vColTangent.b);
+}
+
 DrawPoint GradientPatch::evaluate(double u, double v) const{
   CMatrices Cs = calculateC();
   // get the curve values

@@ -16,6 +16,25 @@ void Mesh::setBasicTestMesh(){
   P10.col = ColorRGB(0, 0, 1);
   P11.col = ColorRGB(1, 1, 1);
 
+  Vec2 Su = Vec2(1.0, 0.0);
+  Vec2 Sv = Vec2(0.0, 1.0);
+
+  P00.uPosTangent = Su;  P00.vPosTangent = Sv;
+  P01.uPosTangent = Su;  P01.vPosTangent = Sv;
+  P10.uPosTangent = Su;  P10.vPosTangent = Sv;
+  P11.uPosTangent = Su;  P11.vPosTangent = Sv;
+
+  // for now, set colour tangents to something simple, e.g. zero:
+  P00.uColTangent = P00.vColTangent = ColorRGB(0,0,0);
+  P01.uColTangent = P01.vColTangent = ColorRGB(0,0,0);
+  P10.uColTangent = P10.vColTangent = ColorRGB(0,0,0);
+  P11.uColTangent = P11.vColTangent = ColorRGB(0,0,0);
+
+  qDebug() << "P00: " << P00.print();
+  qDebug() << "P01: " << P01.print();
+  qDebug() << "P10: " << P10.print();
+  qDebug() << "P11: " << P11.print();
+
   points[0][0] = P00;
   points[0][1] = P01;
   points[1][0] = P10;
@@ -62,86 +81,83 @@ void Mesh::updateDerivatives()
   const double tangentScale = 1.0;
   const double colourTangentScale = 1.0;
 
-  // --- Geometry derivatives ---
-
-  // Horizontal (u direction)
+  // Horizontal (v direction)
   for (int r = 0; r < m_rows; ++r)
   {
     for (int c = 0; c < m_cols; ++c)
     {
-      Vec2 du(0.0, 0.0);
+      Vec2 dv(0.0, 0.0);
 
       if (m_cols > 1)
       {
         if (c == 0)
-          du = points[r][1].pos - points[r][0].pos;
+          dv = points[r][1].pos - points[r][0].pos;
         else if (c == m_cols - 1)
-          du = points[r][m_cols - 1].pos - points[r][m_cols - 2].pos;
+          dv = points[r][m_cols - 1].pos - points[r][m_cols - 2].pos;
         else
-          du = 0.5 * (points[r][c + 1].pos - points[r][c - 1].pos);
-      }
-      points[r][c].uPosTangent = tangentScale * du;
-    }
-  }
-
-  // Vertical (v direction)
-  for (int c = 0; c < m_cols; ++c)
-  {
-    for (int r = 0; r < m_rows; ++r)
-    {
-      Vec2 dv(0.0, 0.0);
-
-      if (m_rows > 1)
-      {
-        if (r == 0)
-          dv = points[1][c].pos - points[0][c].pos;
-        else if (r == m_rows - 1)
-          dv = points[m_rows - 1][c].pos - points[m_rows - 2][c].pos;
-        else
-          dv = 0.5 * (points[r + 1][c].pos - points[r - 1][c].pos);
+          dv = 0.5 * (points[r][c + 1].pos - points[r][c - 1].pos);
       }
       points[r][c].vPosTangent = tangentScale * dv;
     }
   }
 
-  // --- Colour derivatives
-  // Horizontal colour derivatives
-  for (int r = 0; r < m_rows; ++r)
-  {
-    for (int c = 0; c < m_cols; ++c)
-    {
-      ColorRGB duC(0.0, 0.0, 0.0);
-
-      if (m_cols > 1)
-      {
-        if (c == 0)
-          duC = points[r][1].col - points[r][0].col;
-        else if (c == m_cols - 1)
-          duC = points[r][m_cols - 1].col - points[r][m_cols - 2].col;
-        else
-          duC = 0.5 * (points[r][c + 1].col - points[r][c - 1].col);
-      }
-      points[r][c].uColTangent = colourTangentScale * duC;
-    }
-  }
-
-  // Vertical colour derivatives
+  // Horizontal (u direction)
   for (int c = 0; c < m_cols; ++c)
   {
     for (int r = 0; r < m_rows; ++r)
     {
-      ColorRGB dvC(0.0, 0.0, 0.0);
+      Vec2 du(0.0, 0.0);
 
       if (m_rows > 1)
       {
         if (r == 0)
-          dvC = points[1][c].col - points[0][c].col;
+          du = points[1][c].pos - points[0][c].pos;
         else if (r == m_rows - 1)
-          dvC = points[m_rows - 1][c].col - points[m_rows - 2][c].col;
+          du = points[m_rows - 1][c].pos - points[m_rows - 2][c].pos;
         else
-          dvC = 0.5 * (points[r + 1][c].col - points[r - 1][c].col);
+          du = 0.5 * (points[r + 1][c].pos - points[r - 1][c].pos);
+      }
+      points[r][c].uPosTangent = tangentScale * du;
+    }
+  }
+
+  // Vertical colour derivatives
+  for (int r = 0; r < m_rows; ++r)
+  {
+    for (int c = 0; c < m_cols; ++c)
+    {
+      ColorRGB dvC(0.0, 0.0, 0.0);
+
+      if (m_cols > 1)
+      {
+        if (c == 0)
+          dvC = points[r][1].col - points[r][0].col;
+        else if (c == m_cols - 1)
+          dvC = points[r][m_cols - 1].col - points[r][m_cols - 2].col;
+        else
+          dvC = 0.5 * (points[r][c + 1].col - points[r][c - 1].col);
       }
       points[r][c].vColTangent = colourTangentScale * dvC;
+    }
+  }
+
+  // Horizontal colour derivatives
+  for (int c = 0; c < m_cols; ++c)
+  {
+    for (int r = 0; r < m_rows; ++r)
+    {
+      ColorRGB duC(0.0, 0.0, 0.0);
+
+      if (m_rows > 1)
+      {
+        if (r == 0)
+          duC = points[1][c].col - points[0][c].col;
+        else if (r == m_rows - 1)
+          duC = points[m_rows - 1][c].col - points[m_rows - 2][c].col;
+        else
+          duC = 0.5 * (points[r + 1][c].col - points[r - 1][c].col);
+      }
+      points[r][c].uColTangent = colourTangentScale * duC;
     }
   }
 }
