@@ -7,9 +7,9 @@
 #include <QOpenGLVertexArrayObject>
 #include <QMouseEvent>
 
-#include "model/gradientmesh.h"
+#include "renderer.h"
 
-class MainView : public QOpenGLWidget, protected QOpenGLFunctions
+class MainView : public QOpenGLWidget
 {
   Q_OBJECT
 public:
@@ -26,28 +26,8 @@ protected:
   void mouseReleaseEvent(QMouseEvent *event) override;
 
 private:
-  struct Vertex {
-    float x, y;
-    float r, g, b;
-  };
-
-  void buildPatchMesh();
-  void buildControlNetMesh();    // NEW
-
-  QOpenGLShaderProgram m_program;
-
-  // Patches (triangles)
-  QOpenGLVertexArrayObject m_vaoPatch;
-  QOpenGLBuffer            m_vboPatch;
-  int m_vertexCountPatch = 0;
-
-  // Control net (lines + points)
-  QOpenGLVertexArrayObject m_vaoNet;
-  QOpenGLBuffer            m_vboNet;
-  int m_netLineVertexCount  = 0; // GL_LINES
-  int m_netPointVertexCount = 0; // GL_POINTS
-
-  GradientMesh m_mesh;
+  renderer meshRenderer;
+  Mesh m_mesh;
 
   // Selection
   int   m_selectedRow = -1;

@@ -20,9 +20,14 @@ qt_add_executable(LoopSubdiv WIN32 MACOSX_BUNDLE
     mainview.cpp mainview.h
     mainwindow.cpp mainwindow.h mainwindow.ui
     settings.h
-    model/geometry.cpp model/geometry.h
-    model/patch.h model/patch.cpp
-    model/gradientmesh.h model/gradientmesh.cpp
+
+
+
+
+    model/hermite.h model/hermite.cpp
+    model/basicdatatypes.h
+    model/mesh.h model/mesh.cpp
+    renderer.h renderer.cpp
 
 )
 target_link_libraries(LoopSubdiv PRIVATE
