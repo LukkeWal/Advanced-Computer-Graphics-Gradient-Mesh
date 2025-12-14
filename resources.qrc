@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/">
+        <file>shaders/gradmesh.frag</file>
+        <file>shaders/gradmesh.vert</file>
+    </qresource>
+</RCC>

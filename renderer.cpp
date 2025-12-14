@@ -11,27 +11,8 @@ void renderer::cleanup()
 }
 
 void renderer::initializeShader(){
-  shader.addShaderFromSourceCode(QOpenGLShader::Vertex,
-                                 R"(#version 330 core
-           layout(location = 0) in vec2 inPos;
-           layout(location = 1) in vec3 inColor;
-           out vec3 vColor;
-           void main() {
-               vec2 p = inPos * 2.0 - vec2(1.0, 1.0);
-               gl_Position = vec4(p, 0.0, 1.0);
-               vColor = inColor;
-           })"
-                                 );
-
-  shader.addShaderFromSourceCode(QOpenGLShader::Fragment,
-                                 R"(#version 330 core
-           in vec3 vColor;
-           out vec4 fragColor;
-           void main() {
-               fragColor = vec4(vColor, 1.0);
-           })"
-                                 );
-
+  shader.addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/gradmesh.vert");
+  shader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/gradmesh.frag");
   shader.link();
 }
 
@@ -171,14 +152,6 @@ void renderer::buildPatchMesh()
   const int resU = 40;
   const int resV = 40;
 
-  for (int c = 0; c < mesh.cols(); ++c)
-  {
-    for (int r = 0; r < mesh.rows(); ++r)
-    {
-      qDebug() << "P: " << mesh.points[r][c].print();
-    }
-  }
-
   std::vector<Vertex> vertices;
 
   std::vector<GradientPatch> patches = mesh.calculatePatches();
@@ -207,10 +180,11 @@ void renderer::buildPatchMesh()
         double v0 = static_cast<double>(j) / resV;
         double v1 = static_cast<double>(j + 1) / resV;
 
-        DrawPoint c00 = patch.evaluate(u0, v0);
-        DrawPoint c10 = patch.evaluate(u1, v0);
-        DrawPoint c01 = patch.evaluate(u0, v1);
-        DrawPoint c11 = patch.evaluate(u1, v1);
+        CMatrices Cs = patch.calculateC();
+        DrawPoint c00 = patch.evaluate(u0, v0, Cs);
+        DrawPoint c10 = patch.evaluate(u1, v0, Cs);
+        DrawPoint c01 = patch.evaluate(u0, v1, Cs);
+        DrawPoint c11 = patch.evaluate(u1, v1, Cs);
 
         // tri 1
         addVertex(c00);

@@ -28,9 +28,9 @@ struct GradientPatch
 {
 public:
   std::array<std::array<ControlPoint, 2>, 2> controlPoints;
-  DrawPoint evaluate(double u, double v) const;
+  DrawPoint evaluate(double u, double v, CMatrices Cs) const;
+  CMatrices calculateC() const;
 private:
   Vec3 evaluate_for_color(std::array<double,4> Hu, std::array<double,4>Hv, std::array<std::array<Vec3, 4>, 4> C) const;
-  CMatrices calculateC() const;
   std::array<double,4> hermite(double t) const;
 };

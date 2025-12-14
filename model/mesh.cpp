@@ -30,10 +30,10 @@ void Mesh::setBasicTestMesh(){
   P10.uColTangent = P10.vColTangent = ColorRGB(0,0,0);
   P11.uColTangent = P11.vColTangent = ColorRGB(0,0,0);
 
-  qDebug() << "P00: " << P00.print();
-  qDebug() << "P01: " << P01.print();
-  qDebug() << "P10: " << P10.print();
-  qDebug() << "P11: " << P11.print();
+  // qDebug() << "P00: " << P00.print();
+  // qDebug() << "P01: " << P01.print();
+  // qDebug() << "P10: " << P10.print();
+  // qDebug() << "P11: " << P11.print();
 
   points[0][0] = P00;
   points[0][1] = P01;
@@ -47,7 +47,7 @@ void Mesh::setBasicTestMesh(){
 void Mesh::setPaperTestMesh()
 {
   m_rows = 3;
-  m_cols = 3;
+  m_cols = 4;
   points.assign(m_rows, std::vector<ControlPoint>(m_cols));
   for (int r = 0; r < m_rows; ++r)
   {
@@ -59,13 +59,13 @@ void Mesh::setPaperTestMesh()
       ControlPoint cp;
       cp.pos = Vec2(u, v);
       cp.col = ColorRGB(0, 0, 0);
-      if (r == 1 && c == 0)
+      if (r == 1 && c == 1)
         cp.col = ColorRGB(1, 1, 1);
-      if(r == 0 && c == 2)
+      if(r == 0 && c == 3)
         cp.col = ColorRGB(1, 0, 0);
-      if(r == 1 && c == 2)
+      if(r == 1 && c == 3)
         cp.col = ColorRGB(0, 1, 0);
-      if(r == 2 && c == 2)
+      if(r == 2 && c == 3)
         cp.col = ColorRGB(0, 0, 1);
       points[r][c] = cp;
     }
@@ -79,7 +79,7 @@ void Mesh::updateDerivatives()
     return;
 
   const double tangentScale = 1.0;
-  const double colourTangentScale = 1.0;
+  const double colourTangentScale = 0;
 
   // Horizontal (v direction)
   for (int r = 0; r < m_rows; ++r)

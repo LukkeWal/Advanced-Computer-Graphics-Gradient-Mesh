@@ -19,8 +19,7 @@ QString ControlPoint::print()
       .arg(vColTangent.r).arg(vColTangent.g).arg(vColTangent.b);
 }
 
-DrawPoint GradientPatch::evaluate(double u, double v) const{
-  CMatrices Cs = calculateC();
+DrawPoint GradientPatch::evaluate(double u, double v, CMatrices Cs) const{
   // get the curve values
   auto Hu = hermite(u);
   auto Hv = hermite(v);

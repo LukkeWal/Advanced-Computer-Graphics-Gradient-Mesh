@@ -15,7 +15,7 @@ find_package(QT NAMES Qt5 Qt6 REQUIRED COMPONENTS Core)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Gui)
 find_package(Qt${QT_VERSION_MAJOR} OPTIONAL_COMPONENTS OpenGL OpenGLWidgets Widgets)
 
-qt_add_executable(LoopSubdiv WIN32 MACOSX_BUNDLE
+qt_add_executable(GradMesh WIN32 MACOSX_BUNDLE
     main.cpp
     mainview.cpp mainview.h
     mainwindow.cpp mainwindow.h mainwindow.ui
@@ -28,22 +28,23 @@ qt_add_executable(LoopSubdiv WIN32 MACOSX_BUNDLE
     model/basicdatatypes.h
     model/mesh.h model/mesh.cpp
     renderer.h renderer.cpp
+    resources.qrc
 
 )
-target_link_libraries(LoopSubdiv PRIVATE
+target_link_libraries(GradMesh PRIVATE
     Qt::Core
     Qt::Gui
 )
 
 if((QT_VERSION_MAJOR GREATER 5))
-    target_link_libraries(LoopSubdiv PRIVATE
+    target_link_libraries(GradMesh PRIVATE
         Qt::OpenGL
         Qt::OpenGLWidgets
         Qt::Widgets
     )
 endif()
 
-install(TARGETS LoopSubdiv
+install(TARGETS GradMesh
     BUNDLE DESTINATION .
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
