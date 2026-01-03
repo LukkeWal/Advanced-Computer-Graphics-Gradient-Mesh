@@ -16,6 +16,23 @@ void renderer::initializeShader(){
   shader.link();
 }
 
+void renderer::setResolution(int newRes){
+  resolution = newRes;
+  buildPatchMesh();
+  if(curveControl)
+    buildControlNetMesh();
+}
+
+void renderer::setCurveControl(bool doCurveControl){
+  curveControl = doCurveControl;
+  buildControlNetMesh();
+}
+
+void renderer::setcontrolNetOnly(bool newControlNetOnly){
+  controlNetOnly = newControlNetOnly;
+  buildControlNetMesh();
+}
+
 void renderer::initializeGL()
 {
   initializeOpenGLFunctions();
@@ -23,7 +40,6 @@ void renderer::initializeGL()
   glEnable(GL_DEPTH_TEST);
   glDisable(GL_CULL_FACE);
 
-  // --- Patch VAO/VBO (triangles) ---
   m_vaoPatch.create();
   m_vaoPatch.bind();
 
@@ -49,7 +65,6 @@ void renderer::initializeGL()
   m_vboPatch.release();
   m_vaoPatch.release();
 
-  // --- Control net VAO/VBO (lines + points) ---
   m_vaoNet.create();
   m_vaoNet.bind();
 
@@ -79,64 +94,153 @@ void renderer::initializeGL()
 void renderer::buildControlNetMesh()
 {
   std::vector<Vertex> vertices;
-  vertices.reserve(mesh.rows() * mesh.cols() * 4); // rough
+  vertices.reserve(mesh.rows() * mesh.cols() * 8); // rough
 
   auto white = [](float x, float y) {
     Vertex v;
-    v.x = x;
-    v.y = y;
-    v.r = 1.0f;
-    v.g = 1.0f;
-    v.b = 1.0f;
+    v.x = x; v.y = y;
+    v.r = 1.0f; v.g = 1.0f; v.b = 1.0f;
     return v;
   };
 
-  // --- Lines between neighbouring control points ---
-  // Horizontal lines
-  for (int r = 0; r < mesh.rows(); ++r)
+  auto addPolylineAsLines = [&](const std::vector<DrawPoint>& pts)
   {
-    for (int c = 0; c < mesh.cols() - 1; ++c)
+    if (pts.size() < 2) return;
+    for (size_t i = 1; i < pts.size(); ++i)
     {
-      const ControlPoint& a = mesh.points[r][c];
-      const ControlPoint& b = mesh.points[r][c + 1];
+      const auto& a = pts[i - 1].pos;
+      const auto& b = pts[i].pos;
+      vertices.push_back(white(static_cast<float>(a.x), static_cast<float>(a.y)));
+      vertices.push_back(white(static_cast<float>(b.x), static_cast<float>(b.y)));
+    }
+  };
 
-      vertices.push_back(white(static_cast<float>(a.pos.x),
-                               static_cast<float>(a.pos.y)));
-      vertices.push_back(white(static_cast<float>(b.pos.x),
-                               static_cast<float>(b.pos.y)));
+  if (!curveControl)
+  {
+    // Horizontal lines
+    for (int r = 0; r < mesh.rows(); ++r)
+    {
+      for (int c = 0; c < mesh.cols() - 1; ++c)
+      {
+        const ControlPoint& a = mesh.points[r][c];
+        const ControlPoint& b = mesh.points[r][c + 1];
+        vertices.push_back(white((float)a.pos.x, (float)a.pos.y));
+        vertices.push_back(white((float)b.pos.x, (float)b.pos.y));
+      }
+    }
+
+    // Vertical lines
+    for (int c = 0; c < mesh.cols(); ++c)
+    {
+      for (int r = 0; r < mesh.rows() - 1; ++r)
+      {
+        const ControlPoint& a = mesh.points[r][c];
+        const ControlPoint& b = mesh.points[r + 1][c];
+        vertices.push_back(white((float)a.pos.x, (float)a.pos.y));
+        vertices.push_back(white((float)b.pos.x, (float)b.pos.y));
+      }
+    }
+  }
+  else
+  {
+    const int pr = mesh.rows() - 1; // patches in rows
+    const int pc = mesh.cols() - 1; // patches in cols
+    const int S  = std::max(2, resolution);
+
+    std::vector<GradientPatch> patches = mesh.calculatePatches();
+    if ((int)patches.size() == pr * pc)
+    {
+      auto patchAt = [&](int r, int c) -> const GradientPatch& {
+        return patches[r * pc + c];
+      };
+
+      auto sampleEdge = [&](const GradientPatch& patch,
+                            const CMatrices& Cs,
+                            bool uFixed, double fixedVal,
+                            bool alongU) -> std::vector<DrawPoint>
+      {
+        std::vector<DrawPoint> pts;
+        pts.reserve((size_t)S + 1);
+
+        for (int k = 0; k <= S; ++k)
+        {
+          double t = (double)k / (double)S;
+          double u = 0.0, v = 0.0;
+
+          if (alongU) { // u varies, v fixed
+            u = t;
+            v = fixedVal;
+          } else {      // v varies, u fixed
+            u = fixedVal;
+            v = t;
+          }
+
+          pts.push_back(patch.evaluate(u, v, Cs));
+        }
+        return pts;
+      };
+
+      for (int r = 0; r < pr; ++r)
+      {
+        for (int c = 0; c < pc; ++c)
+        {
+          const GradientPatch& patch = patchAt(r, c);
+          const CMatrices Cs = patch.calculateC(); // compute ONCE per patch
+          addPolylineAsLines(sampleEdge(patch, Cs, false, 1.0, true));
+          addPolylineAsLines(sampleEdge(patch, Cs, true, 1.0, false));
+          addPolylineAsLines(sampleEdge(patch, Cs, true, 0.0, false));
+          addPolylineAsLines(sampleEdge(patch, Cs, false, 0.0, true));
+        }
+      }
+    }
+    else
+    {
+      for (int r = 0; r < mesh.rows(); ++r)
+      {
+        for (int c = 0; c < mesh.cols() - 1; ++c)
+        {
+          const ControlPoint& a = mesh.points[r][c];
+          const ControlPoint& b = mesh.points[r][c + 1];
+          vertices.push_back(white((float)a.pos.x, (float)a.pos.y));
+          vertices.push_back(white((float)b.pos.x, (float)b.pos.y));
+        }
+      }
+      for (int c = 0; c < mesh.cols(); ++c)
+      {
+        for (int r = 0; r < mesh.rows() - 1; ++r)
+        {
+          const ControlPoint& a = mesh.points[r][c];
+          const ControlPoint& b = mesh.points[r + 1][c];
+          vertices.push_back(white((float)a.pos.x, (float)a.pos.y));
+          vertices.push_back(white((float)b.pos.x, (float)b.pos.y));
+        }
+      }
     }
   }
 
-  // Vertical lines
-  for (int c = 0; c < mesh.cols(); ++c)
-  {
-    for (int r = 0; r < mesh.rows() - 1; ++r)
-    {
-      const ControlPoint& a = mesh.points[r][c];
-      const ControlPoint& b = mesh.points[r + 1][c];
-
-      vertices.push_back(white(static_cast<float>(a.pos.x),
-                               static_cast<float>(a.pos.y)));
-      vertices.push_back(white(static_cast<float>(b.pos.x),
-                               static_cast<float>(b.pos.y)));
-    }
-  }
-
+  // Line vertices done
   m_netLineVertexCount = static_cast<int>(vertices.size());
 
-  // --- Points at each control point ---
+  // Points at each control point (unchanged)
   for (int r = 0; r < mesh.rows(); ++r)
   {
     for (int c = 0; c < mesh.cols(); ++c)
     {
       const ControlPoint& p = mesh.points[r][c];
-      vertices.push_back(white(static_cast<float>(p.pos.x),
-                               static_cast<float>(p.pos.y)));
+      if (controlNetOnly){
+        Vertex v;
+        v.x = static_cast<float>(p.pos.x);
+        v.y = static_cast<float>(p.pos.y);
+        v.r = static_cast<float>(p.col.r);
+        v.g = static_cast<float>(p.col.g);
+        v.b = static_cast<float>(p.col.b);
+
+        vertices.push_back(v);
+      } else
+        vertices.push_back(white((float)p.pos.x, (float)p.pos.y));
     }
   }
-
-  m_netPointVertexCount =
-      mesh.rows() * mesh.cols();
+  m_netPointVertexCount = mesh.rows() * mesh.cols();
 
   // Upload to GPU
   m_vaoNet.bind();
@@ -149,8 +253,8 @@ void renderer::buildControlNetMesh()
 
 void renderer::buildPatchMesh()
 {
-  const int resU = 40;
-  const int resV = 40;
+  const int resU = resolution;
+  const int resV = resolution;
 
   std::vector<Vertex> vertices;
 
@@ -170,6 +274,7 @@ void renderer::buildPatchMesh()
 
   for (const GradientPatch& patch : patches)
   {
+    CMatrices Cs = patch.calculateC();
     for (int i = 0; i < resU; ++i)
     {
       double u0 = static_cast<double>(i) / resU;
@@ -180,7 +285,7 @@ void renderer::buildPatchMesh()
         double v0 = static_cast<double>(j) / resV;
         double v1 = static_cast<double>(j + 1) / resV;
 
-        CMatrices Cs = patch.calculateC();
+
         DrawPoint c00 = patch.evaluate(u0, v0, Cs);
         DrawPoint c10 = patch.evaluate(u1, v0, Cs);
         DrawPoint c01 = patch.evaluate(u0, v1, Cs);
@@ -223,20 +328,26 @@ void renderer::draw(){
 
   shader.bind();
 
-  // --- Draw patches (triangles) ---
-  glEnable(GL_DEPTH_TEST);
-  m_vaoPatch.bind();
-  glDrawArrays(GL_TRIANGLES, 0, m_vertexCountPatch);
-  m_vaoPatch.release();
+  if (!controlNetOnly)
+  {
+    // Draw patches (triangles)
+    glEnable(GL_DEPTH_TEST);
+    m_vaoPatch.bind();
+    glDrawArrays(GL_TRIANGLES, 0, m_vertexCountPatch);
+    m_vaoPatch.release();
+  }
 
-  // --- Draw control net on top ---
+  // Draw control net on top
   glDisable(GL_DEPTH_TEST);
   m_vaoNet.bind();
 
   glLineWidth(1.5f);
   glDrawArrays(GL_LINES, 0, m_netLineVertexCount);
 
-  glPointSize(6.0f);
+  if(controlNetOnly)
+    glPointSize(20.0f);
+  else
+    glPointSize(10.0f);
   glDrawArrays(GL_POINTS,
                m_netLineVertexCount,
                m_netPointVertexCount);

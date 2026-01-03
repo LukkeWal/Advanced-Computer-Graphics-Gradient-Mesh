@@ -19,7 +19,7 @@ qt_add_executable(GradMesh WIN32 MACOSX_BUNDLE
     main.cpp
     mainview.cpp mainview.h
     mainwindow.cpp mainwindow.h mainwindow.ui
-    settings.h
+
 
 
 
@@ -29,6 +29,7 @@ qt_add_executable(GradMesh WIN32 MACOSX_BUNDLE
     model/mesh.h model/mesh.cpp
     renderer.h renderer.cpp
     resources.qrc
+    MeshPresets.h
 
 )
 target_link_libraries(GradMesh PRIVATE

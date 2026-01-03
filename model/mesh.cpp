@@ -162,6 +162,60 @@ void Mesh::updateDerivatives()
   }
 }
 
+void Mesh::setAppleMesh()
+{
+  // 7x7 regular grid in normalized [0..1]x[0..1]
+  m_rows = 7;
+  m_cols = 6;
+  points.assign(m_rows, std::vector<ControlPoint>(m_cols));
+
+  auto U = [&](int c) -> double { return (m_cols == 1) ? 0.0 : static_cast<double>(c) / (m_cols - 1); };
+  auto V = [&](int r) -> double { return (m_rows == 1) ? 0.0 : static_cast<double>(r) / (m_rows - 1); };
+
+  // Colors as ColorRGB(r,g,b) in [0..1] converted from the hex palette I suggested.
+  // Layout is row-major: r = y (v) from top (0) to bottom (1), c = x (u) from left (0) to right (1).
+  const ColorRGB C[7][6] = {
+      { ColorRGB(1, 1, 1), ColorRGB(1, 1, 1), ColorRGB(1, 1, 1), ColorRGB(1, 1, 1), ColorRGB(1, 1, 1), ColorRGB(1, 1, 1) },
+      { ColorRGB(1, 1, 1), ColorRGB(1, 0, 0), ColorRGB(1, 0, 0), ColorRGB(1, 0, 0), ColorRGB(1, 0, 0), ColorRGB(1, 1, 1) },
+      { ColorRGB(1, 1, 1), ColorRGB(1, 0, 0), ColorRGB(1, 0, 0), ColorRGB(1, 0.5, 0.5), ColorRGB(1, 0, 0), ColorRGB(1, 1, 1) },
+      { ColorRGB(1, 1, 1), ColorRGB(1, 0, 0), ColorRGB(1, 0, 0), ColorRGB(1, 0, 0), ColorRGB(1, 0, 0), ColorRGB(1, 1, 1) },
+      { ColorRGB(1, 1, 1), ColorRGB(0.5, 0.3, 0), ColorRGB(0.5, 0.3, 0), ColorRGB(0.5, 0.3, 0), ColorRGB(1, 1, 1), ColorRGB(1, 1, 1) },
+      { ColorRGB(1, 1, 1), ColorRGB(0.5, 0.3, 0), ColorRGB(0.5, 0.3, 0), ColorRGB(0.5, 0.3, 0), ColorRGB(1, 1, 1), ColorRGB(1, 1, 1) },
+      { ColorRGB(1, 1, 1), ColorRGB(1, 1, 1), ColorRGB(1, 1, 1), ColorRGB(1, 1, 1), ColorRGB(1, 1, 1), ColorRGB(1, 1, 1) },
+      };
+
+  const Vec2 p[7][6] = {
+      {Vec2(0.411348, 0.248677), Vec2(0.421099, 0.228836), Vec2(0.481383, 0.14418), Vec2(0.614362, 0.140212), Vec2(0.722518, 0.161376), Vec2(0.743794, 0.190476)},
+      {Vec2(0.406915, 0.279101), Vec2(0.43883, 0.257937), Vec2(0.501773, 0.187831), Vec2(0.6, 0.166667), Vec2(0.719858, 0.203704), Vec2(0.74734, 0.232804)},
+      {Vec2(0.399823, 0.342593), Vec2(0.432624, 0.339947), Vec2(0.578901, 0.34127), Vec2(0.611702, 0.34127), Vec2(0.744681, 0.322751), Vec2(0.771277, 0.324074)},
+      {Vec2(0.410461, 0.439153), Vec2(0.435284, 0.431217), Vec2(0.496454, 0.482804), Vec2(0.592199, 0.501323), Vec2(0.702128, 0.452381), Vec2(0.734929, 0.46164)},
+      {Vec2(0.47695, 0.518519), Vec2(0.498227, 0.519841), Vec2(0.515957, 0.527778), Vec2(0.535461, 0.519841), Vec2(0.549645, 0.543651), Vec2(0.585106, 0.548942)},
+      {Vec2(0.442376, 0.583333), Vec2(0.464539, 0.584656), Vec2(0.457447, 0.634921), Vec2(0.495567, 0.593915), Vec2(0.513298, 0.60582), Vec2(0.545213, 0.585979)},
+      {Vec2(0.419326, 0.630952), Vec2(0.431738, 0.653439), Vec2(0.462766, 0.666667), Vec2(0.484043, 0.648148), Vec2(0.507092, 0.634921), Vec2(0.536348, 0.64418)},
+  };
+
+  for (int r = 0; r < m_rows; ++r)
+  {
+    for (int c = 0; c < m_cols; ++c)
+    {
+      ControlPoint cp;
+      cp.pos = p[r][c];
+      cp.col = C[r][c];
+
+      // If your ControlPoint constructor doesn’t initialize these, make them explicit:
+      cp.uPosTangent = Vec2(0.0, 0.0);
+      cp.vPosTangent = Vec2(0.0, 0.0);
+      cp.uColTangent = ColorRGB(0.0, 0.0, 0.0);
+      cp.vColTangent = ColorRGB(0.0, 0.0, 0.0);
+
+      points[r][c] = cp;
+    }
+  }
+
+  updateDerivatives();
+}
+
+
 std::vector<GradientPatch> Mesh::calculatePatches() const
 {
   std::vector<GradientPatch> patches;

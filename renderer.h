@@ -16,12 +16,17 @@ public:
   void initializeShader();
   void setMesh(const Mesh &m);
   void draw();
+  void setResolution(int newRes);
+  void setCurveControl(bool doCurveControl);
+  void setcontrolNetOnly(bool newControlNetOnly);
 private:
   struct Vertex {
     float x, y;
     float r, g, b;
   };
-
+  int resolution = 40;
+  bool curveControl = false;
+  bool controlNetOnly = false;
   void buildControlNetMesh();
   void buildPatchMesh();
 

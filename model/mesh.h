@@ -6,6 +6,7 @@ class Mesh
 public:
   void setPaperTestMesh();
   void setBasicTestMesh();
+  void setAppleMesh();
   void updateDerivatives();
   std::vector<GradientPatch> calculatePatches() const;
   std::vector<std::vector<ControlPoint>> points;

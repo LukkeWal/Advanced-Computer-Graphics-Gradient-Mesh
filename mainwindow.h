@@ -20,9 +20,11 @@ class MainWindow : public QMainWindow {
   ~MainWindow() override;
 
  private slots:
-
+  void on_PresetSelect_currentIndexChanged(int index);
+  void on_Resolution_valueChanged(int value);
+  void on_curveControl_toggled(bool checked);
+  void on_showGradient_toggled(bool checked);
  private:
-
   Ui::MainWindow *ui;
 };
 

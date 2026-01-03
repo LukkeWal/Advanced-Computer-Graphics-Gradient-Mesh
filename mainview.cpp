@@ -14,9 +14,40 @@ void MainView::initializeGL()
   meshRenderer.initializeShader();
   meshRenderer.initializeGL();
   m_mesh = Mesh();
-  //m_mesh.setBasicTestMesh();
   m_mesh.setPaperTestMesh();
   meshRenderer.setMesh(m_mesh);
+}
+
+void MainView::meshChanged(MeshPreset selectedMesh)
+{
+  if (selectedMesh ==  MeshPreset::BASIC){
+    m_mesh.setBasicTestMesh();
+    meshRenderer.setMesh(m_mesh);
+  }
+  if (selectedMesh == MeshPreset::PAPER){
+    m_mesh.setPaperTestMesh();
+    meshRenderer.setMesh(m_mesh);
+  }
+  if (selectedMesh == MeshPreset::APPLE){
+    m_mesh.setAppleMesh();
+    meshRenderer.setMesh(m_mesh);
+  }
+  update();
+}
+
+void MainView::resolutionChanged(int resolution){
+  meshRenderer.setResolution(resolution);
+  update();
+}
+
+void MainView::curveControlChanged(bool curveControl){
+  meshRenderer.setCurveControl(curveControl);
+  update();
+}
+
+void MainView::showGradientChanged(bool showGradient){
+  meshRenderer.setcontrolNetOnly(!showGradient);
+  update();
 }
 
 void MainView::resizeGL(int w, int h)

@@ -8,6 +8,7 @@
 #include <QMouseEvent>
 
 #include "renderer.h"
+#include "MeshPresets.h"
 
 class MainView : public QOpenGLWidget
 {
@@ -15,6 +16,10 @@ class MainView : public QOpenGLWidget
 public:
   explicit MainView(QWidget *parent = nullptr);
   ~MainView() override;
+  void meshChanged(MeshPreset meshPreset);
+  void resolutionChanged(int resolution);
+  void curveControlChanged(bool curveControl);
+  void showGradientChanged(bool showGradient);
 
 protected:
   void initializeGL() override;
