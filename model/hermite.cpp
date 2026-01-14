@@ -1,23 +1,5 @@
 #include "hermite.h"
 
-QString ControlPoint::print()
-{
-  return QString(
-             "ControlPoint("
-             "pos=(%1,%2), "
-             "uPosTangent=(%3,%4), "
-             "vPosTangent=(%5,%6), "
-             "uColTangent=(%10,%11,%12), "
-             "vColTangent=(%13,%14,%15), "
-             "col=(%7,%8,%9)"
-             ")"
-             ).arg(pos.x).arg(pos.y)
-      .arg(uPosTangent.x).arg(uPosTangent.y)
-      .arg(vPosTangent.x).arg(vPosTangent.y)
-      .arg(col.r).arg(col.g).arg(col.b)
-      .arg(uColTangent.r).arg(uColTangent.g).arg(uColTangent.b)
-      .arg(vColTangent.r).arg(vColTangent.g).arg(vColTangent.b);
-}
 
 DrawPoint GradientPatch::evaluate(double u, double v, CMatrices Cs) const{
   // get the curve values
@@ -68,26 +50,26 @@ std::array<double,4> GradientPatch::hermite(double t) const
 
 
 CMatrices GradientPatch::calculateC() const{
-  auto buildChannel = [&](auto getCol, auto getCol_u, auto getCol_v) {
+  auto buildChannel = [&](auto getCol) {
     ControlPoint P00 = controlPoints[0][0];
     ControlPoint P01 = controlPoints[0][1];
     ControlPoint P10 = controlPoints[1][0];
     ControlPoint P11 = controlPoints[1][1];
 
-    Vec3 S00 = {P00.pos.x, P00.pos.y, getCol(P00)};
-    Vec3 S01 = {P01.pos.x, P01.pos.y, getCol(P01)};
-    Vec3 S10 = {P10.pos.x, P10.pos.y, getCol(P10)};
-    Vec3 S11 = {P11.pos.x, P11.pos.y, getCol(P11)};
+    Vec3 S00 = {P00.pos.x, P00.pos.y, getCol(P00.cols[1][1])};
+    Vec3 S01 = {P01.pos.x, P01.pos.y, getCol(P01.cols[1][0])};
+    Vec3 S10 = {P10.pos.x, P10.pos.y, getCol(P10.cols[0][1])};
+    Vec3 S11 = {P11.pos.x, P11.pos.y, getCol(P11.cols[0][0])};
 
-    Vec3 Sv00 = {P00.vPosTangent.x, P00.vPosTangent.y, getCol_v(P00)};
-    Vec3 Sv01 = {P01.vPosTangent.x, P01.vPosTangent.y, getCol_v(P01)};
-    Vec3 Sv10 = {P10.vPosTangent.x, P10.vPosTangent.y, getCol_v(P10)};
-    Vec3 Sv11 = {P11.vPosTangent.x, P11.vPosTangent.y, getCol_v(P11)};
+    Vec3 Sv00 = {P00.vPosTangent.x, P00.vPosTangent.y, 0};
+    Vec3 Sv01 = {P01.vPosTangent.x, P01.vPosTangent.y, 0};
+    Vec3 Sv10 = {P10.vPosTangent.x, P10.vPosTangent.y, 0};
+    Vec3 Sv11 = {P11.vPosTangent.x, P11.vPosTangent.y, 0};
 
-    Vec3 Su00 = {P00.uPosTangent.x, P00.uPosTangent.y, getCol_u(P00)};
-    Vec3 Su01 = {P01.uPosTangent.x, P01.uPosTangent.y, getCol_u(P01)};
-    Vec3 Su10 = {P10.uPosTangent.x, P10.uPosTangent.y, getCol_u(P10)};
-    Vec3 Su11 = {P11.uPosTangent.x, P11.uPosTangent.y, getCol_u(P11)};
+    Vec3 Su00 = {P00.uPosTangent.x, P00.uPosTangent.y, 0};
+    Vec3 Su01 = {P01.uPosTangent.x, P01.uPosTangent.y, 0};
+    Vec3 Su10 = {P10.uPosTangent.x, P10.uPosTangent.y, 0};
+    Vec3 Su11 = {P11.uPosTangent.x, P11.uPosTangent.y, 0};
 
     Vec3 zero = {0, 0, 0};
 
@@ -102,23 +84,9 @@ CMatrices GradientPatch::calculateC() const{
 
   CMatrices result;
 
-  result.C_red   = buildChannel(
-      [](auto& p){ return p.col.r; },
-      [](auto& p){ return p.uColTangent.r; },
-      [](auto& p){ return p.vColTangent.r; }
-      );
-
-  result.C_green = buildChannel(
-      [](auto& p){ return p.col.g; },
-      [](auto& p){ return p.uColTangent.g; },
-      [](auto& p){ return p.vColTangent.g; }
-      );
-
-  result.C_blue  = buildChannel(
-      [](auto& p){ return p.col.b; },
-      [](auto& p){ return p.uColTangent.b; },
-      [](auto& p){ return p.vColTangent.b; }
-      );
+  result.C_red   = buildChannel([](auto& col){ return col.r;});
+  result.C_green = buildChannel([](auto& col){ return col.g; });
+  result.C_blue  = buildChannel([](auto& col){ return col.b; });
   return result;
 }
 

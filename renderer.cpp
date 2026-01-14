@@ -8,12 +8,32 @@ void renderer::cleanup()
   m_vaoPatch.destroy();
   m_vboNet.destroy();
   m_vaoNet.destroy();
+  if (CsHandle) {
+    glDeleteBuffers(1, &CsHandle);
+    CsHandle = 0;
+  }
 }
 
 void renderer::initializeShader(){
-  shader.addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/gradmesh.vert");
-  shader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/gradmesh.frag");
-  shader.link();
+  auto ok =
+      shader.addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/gradmesh.vert") &&
+      shader.addShaderFromSourceFile(QOpenGLShader::TessellationControl, ":/shaders/gradmesh.tesc") &&
+      shader.addShaderFromSourceFile(QOpenGLShader::TessellationEvaluation, ":/shaders/gradmesh.tese") &&
+      shader.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/gradmesh.frag") &&
+      shader.link();
+
+  if (!ok) {
+    qDebug() << "Shader error:" << shader.log();
+  }
+
+  ok =
+      shaderNet.addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/net.vert") &&
+      shaderNet.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/net.frag") &&
+      shaderNet.link();
+
+  if (!ok) {
+    qDebug() << "Shader error:" << shaderNet.log();
+  }
 }
 
 void renderer::setResolution(int newRes){
@@ -35,72 +55,101 @@ void renderer::setcontrolNetOnly(bool newControlNetOnly){
 
 void renderer::initializeGL()
 {
-  initializeOpenGLFunctions();
+  const bool ok = initializeOpenGLFunctions();
+  qDebug() << "initializeOpenGLFunctions() =" << ok;
+
+  // SSBO handle for patch coefficients
+  glGenBuffers(1, &CsHandle);
 
   glEnable(GL_DEPTH_TEST);
   glDisable(GL_CULL_FACE);
 
+  // Needed if your vertex shader sets gl_PointSize
+  glEnable(GL_PROGRAM_POINT_SIZE);
+
   m_vaoPatch.create();
   m_vaoPatch.bind();
-
-  m_vboPatch = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
-  m_vboPatch.create();
-  m_vboPatch.bind();
-
-  shader.bind();
-  shader.enableAttributeArray(0);
-  shader.enableAttributeArray(1);
-  shader.setAttributeBuffer(
-      0, GL_FLOAT,
-      offsetof(Vertex, x),
-      2, sizeof(Vertex)
-      );
-  shader.setAttributeBuffer(
-      1, GL_FLOAT,
-      offsetof(Vertex, r),
-      3, sizeof(Vertex)
-      );
-  shader.release();
-
-  m_vboPatch.release();
   m_vaoPatch.release();
 
   m_vaoNet.create();
   m_vaoNet.bind();
 
+  if (m_vboNet.isCreated())
+    m_vboNet.destroy();
+
   m_vboNet = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
   m_vboNet.create();
   m_vboNet.bind();
 
-  shader.bind();
-  shader.enableAttributeArray(0);
-  shader.enableAttributeArray(1);
-  shader.setAttributeBuffer(
-      0, GL_FLOAT,
-      offsetof(Vertex, x),
-      2, sizeof(Vertex)
+  // Position (x,y) at location 0
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(
+      0, 2, GL_FLOAT, GL_FALSE,
+      sizeof(Vertex),
+      reinterpret_cast<void*>(offsetof(Vertex, x))
       );
-  shader.setAttributeBuffer(
-      1, GL_FLOAT,
-      offsetof(Vertex, r),
-      3, sizeof(Vertex)
+
+  // Quadrant color 0 at location 1
+  glEnableVertexAttribArray(1);
+  glVertexAttribPointer(
+      1, 3, GL_FLOAT, GL_FALSE,
+      sizeof(Vertex),
+      reinterpret_cast<void*>(offsetof(Vertex, r0))
       );
-  shader.release();
+
+  // Quadrant color 1 at location 2
+  glEnableVertexAttribArray(2);
+  glVertexAttribPointer(
+      2, 3, GL_FLOAT, GL_FALSE,
+      sizeof(Vertex),
+      reinterpret_cast<void*>(offsetof(Vertex, r1))
+      );
+
+  // Quadrant color 2 at location 3
+  glEnableVertexAttribArray(3);
+  glVertexAttribPointer(
+      3, 3, GL_FLOAT, GL_FALSE,
+      sizeof(Vertex),
+      reinterpret_cast<void*>(offsetof(Vertex, r2))
+      );
+
+  // Quadrant color 3 at location 4
+  glEnableVertexAttribArray(4);
+  glVertexAttribPointer(
+      4, 3, GL_FLOAT, GL_FALSE,
+      sizeof(Vertex),
+      reinterpret_cast<void*>(offsetof(Vertex, r3))
+      );
 
   m_vboNet.release();
   m_vaoNet.release();
 }
 
+
 void renderer::buildControlNetMesh()
 {
   std::vector<Vertex> vertices;
-  vertices.reserve(mesh.rows() * mesh.cols() * 8); // rough
+  vertices.reserve(mesh.rows() * mesh.cols() * 8);
 
-  auto white = [](float x, float y) {
-    Vertex v;
+  auto mk = [](float x, float y,
+               const ColorRGB& c0,
+               const ColorRGB& c1,
+               const ColorRGB& c2,
+               const ColorRGB& c3)
+  {
+    Vertex v{};
     v.x = x; v.y = y;
-    v.r = 1.0f; v.g = 1.0f; v.b = 1.0f;
+
+    v.r0 = (float)c0.r; v.g0 = (float)c0.g; v.b0 = (float)c0.b;
+    v.r1 = (float)c1.r; v.g1 = (float)c1.g; v.b1 = (float)c1.b;
+    v.r2 = (float)c2.r; v.g2 = (float)c2.g; v.b2 = (float)c2.b;
+    v.r3 = (float)c3.r; v.g3 = (float)c3.g; v.b3 = (float)c3.b;
     return v;
+  };
+
+  auto white = [&](float x, float y) {
+    ColorRGB w{1.0, 1.0, 1.0};
+    return mk(x, y, w, w, w, w);
   };
 
   auto addPolylineAsLines = [&](const std::vector<DrawPoint>& pts)
@@ -167,10 +216,10 @@ void renderer::buildControlNetMesh()
           double t = (double)k / (double)S;
           double u = 0.0, v = 0.0;
 
-          if (alongU) { // u varies, v fixed
+          if (alongU) {
             u = t;
             v = fixedVal;
-          } else {      // v varies, u fixed
+          } else {
             u = fixedVal;
             v = t;
           }
@@ -185,7 +234,7 @@ void renderer::buildControlNetMesh()
         for (int c = 0; c < pc; ++c)
         {
           const GradientPatch& patch = patchAt(r, c);
-          const CMatrices Cs = patch.calculateC(); // compute ONCE per patch
+          const CMatrices Cs = patch.calculateC(); // compute once
           addPolylineAsLines(sampleEdge(patch, Cs, false, 1.0, true));
           addPolylineAsLines(sampleEdge(patch, Cs, true, 1.0, false));
           addPolylineAsLines(sampleEdge(patch, Cs, true, 0.0, false));
@@ -218,26 +267,28 @@ void renderer::buildControlNetMesh()
     }
   }
 
-  // Line vertices done
   m_netLineVertexCount = static_cast<int>(vertices.size());
 
-  // Points at each control point (unchanged)
+  // Points at each control point
   for (int r = 0; r < mesh.rows(); ++r)
   {
     for (int c = 0; c < mesh.cols(); ++c)
     {
       const ControlPoint& p = mesh.points[r][c];
-      if (controlNetOnly){
-        Vertex v;
-        v.x = static_cast<float>(p.pos.x);
-        v.y = static_cast<float>(p.pos.y);
-        v.r = static_cast<float>(p.col.r);
-        v.g = static_cast<float>(p.col.g);
-        v.b = static_cast<float>(p.col.b);
 
-        vertices.push_back(v);
-      } else
+      if (controlNetOnly)
+      {
+        const ColorRGB& CTL = p.cols[0][0];
+        const ColorRGB& CTR = p.cols[0][1];
+        const ColorRGB& CBL = p.cols[1][0];
+        const ColorRGB& CBR = p.cols[1][1];
+
+        vertices.push_back(mk((float)p.pos.x, (float)p.pos.y, CBL, CBR, CTL, CTR));
+      }
+      else
+      {
         vertices.push_back(white((float)p.pos.x, (float)p.pos.y));
+      }
     }
   }
   m_netPointVertexCount = mesh.rows() * mesh.cols();
@@ -253,67 +304,38 @@ void renderer::buildControlNetMesh()
 
 void renderer::buildPatchMesh()
 {
-  const int resU = resolution;
-  const int resV = resolution;
-
-  std::vector<Vertex> vertices;
-
   std::vector<GradientPatch> patches = mesh.calculatePatches();
-  vertices.reserve(static_cast<std::size_t>(patches.size() * resU * resV * 6));
+  patchCount = static_cast<int>(patches.size());
+  if (patchCount == 0) return;
 
-  auto addVertex = [&vertices](const DrawPoint& p)
-  {
-    Vertex v;
-    v.x = static_cast<float>(p.pos.x);
-    v.y = static_cast<float>(p.pos.y);
-    v.r = static_cast<float>(p.col.r);
-    v.g = static_cast<float>(p.col.g);
-    v.b = static_cast<float>(p.col.b);
-    vertices.push_back(v);
+  std::vector<CsGPU> gpu;
+  gpu.resize(patches.size());
+
+  auto toVec4 = [](const Vec3& v) -> Vec4 {
+    return Vec4{ (float)v.x, (float)v.y, (float)v.z, 0.0f };
   };
 
-  for (const GradientPatch& patch : patches)
+  for (size_t p = 0; p < patches.size(); ++p)
   {
-    CMatrices Cs = patch.calculateC();
-    for (int i = 0; i < resU; ++i)
-    {
-      double u0 = static_cast<double>(i) / resU;
-      double u1 = static_cast<double>(i + 1) / resU;
+    CMatrices Cs = patches[p].calculateC();
 
-      for (int j = 0; j < resV; ++j)
+    for (int r = 0; r < 4; ++r)
+      for (int c = 0; c < 4; ++c)
       {
-        double v0 = static_cast<double>(j) / resV;
-        double v1 = static_cast<double>(j + 1) / resV;
-
-
-        DrawPoint c00 = patch.evaluate(u0, v0, Cs);
-        DrawPoint c10 = patch.evaluate(u1, v0, Cs);
-        DrawPoint c01 = patch.evaluate(u0, v1, Cs);
-        DrawPoint c11 = patch.evaluate(u1, v1, Cs);
-
-        // tri 1
-        addVertex(c00);
-        addVertex(c10);
-        addVertex(c01);
-
-        // tri 2
-        addVertex(c10);
-        addVertex(c11);
-        addVertex(c01);
+        int idx = r * 4 + c;
+        gpu[p].Cred[idx]   = toVec4(Cs.C_red[r][c]);
+        gpu[p].Cgreen[idx] = toVec4(Cs.C_green[r][c]);
+        gpu[p].Cblue[idx]  = toVec4(Cs.C_blue[r][c]);
       }
-    }
   }
-  m_vertexCountPatch = static_cast<int>(vertices.size());
 
-  // Upload to GPU
-  m_vaoPatch.bind();
-  m_vboPatch.bind();
-  m_vboPatch.allocate(
-      vertices.data(),
-      static_cast<int>(vertices.size() * sizeof(Vertex))
-      );
-  m_vboPatch.release();
-  m_vaoPatch.release();
+  // Upload SSBO
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, CsHandle);
+  glBufferData(GL_SHADER_STORAGE_BUFFER,
+               GLsizeiptr(gpu.size() * sizeof(CsGPU)),
+               gpu.data(),
+               GL_DYNAMIC_DRAW);
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 }
 
 void renderer::setMesh(const Mesh &m){
@@ -325,34 +347,37 @@ void renderer::setMesh(const Mesh &m){
 void renderer::draw(){
   glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
   shader.bind();
+  shader.setUniformValue("uTess", float(resolution));
 
   if (!controlNetOnly)
   {
-    // Draw patches (triangles)
     glEnable(GL_DEPTH_TEST);
+
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, CsHandle);
+
+    glPatchParameteri(GL_PATCH_VERTICES, 4);
+
     m_vaoPatch.bind();
-    glDrawArrays(GL_TRIANGLES, 0, m_vertexCountPatch);
+    glDrawArraysInstanced(GL_PATCHES, 0, 4, patchCount); // 4 dummy verts, patchCount instances
     m_vaoPatch.release();
+
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
   }
+  shader.release();
+  shaderNet.bind();
+  shaderNet.setUniformValue("uPointSize", controlNetOnly ? 20.0f : 10.0f);
 
   // Draw control net on top
   glDisable(GL_DEPTH_TEST);
   m_vaoNet.bind();
 
   glLineWidth(1.5f);
+  shaderNet.setUniformValue("uIsPoint", 0);
   glDrawArrays(GL_LINES, 0, m_netLineVertexCount);
-
-  if(controlNetOnly)
-    glPointSize(20.0f);
-  else
-    glPointSize(10.0f);
-  glDrawArrays(GL_POINTS,
-               m_netLineVertexCount,
-               m_netPointVertexCount);
+  shaderNet.setUniformValue("uIsPoint", 1);
+  glDrawArrays(GL_POINTS, m_netLineVertexCount, m_netPointVertexCount);
 
   m_vaoNet.release();
-
-  shader.release();
+  shaderNet.release();
 }

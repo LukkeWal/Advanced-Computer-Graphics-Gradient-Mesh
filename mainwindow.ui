@@ -83,6 +83,11 @@ QGroupBox::title {
          <string>Apple?</string>
         </property>
        </item>
+       <item>
+        <property name="text">
+         <string>Sharp</string>
+        </property>
+       </item>
       </widget>
       <widget class="QLabel" name="label">
        <property name="geometry">

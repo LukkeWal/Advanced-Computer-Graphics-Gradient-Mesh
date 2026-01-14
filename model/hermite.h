@@ -3,14 +3,14 @@
 
 #include "basicdatatypes.h"
 
+std::array<std::array<ColorRGB, 4>, 4> oneCol(ColorRGB col);
+
 struct ControlPoint{
   Vec2 pos;
   Vec2 uPosTangent;
   Vec2 vPosTangent;
-  ColorRGB uColTangent;
-  ColorRGB vColTangent;
-  ColorRGB col;
-  QString print();
+  std::array<std::array<ColorRGB, 4>, 4> cols;
+  //ColorRGB col;
 };
 
 struct DrawPoint{

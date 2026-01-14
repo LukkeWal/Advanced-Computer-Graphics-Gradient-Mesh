@@ -7,7 +7,9 @@
 
 #include "model/mesh.h"
 
-class renderer: protected QOpenGLFunctions
+#include <QOpenGLFunctions_4_3_Core>
+
+class renderer : protected QOpenGLFunctions_4_3_Core
 {
 public:
   renderer();
@@ -22,8 +24,20 @@ public:
 private:
   struct Vertex {
     float x, y;
-    float r, g, b;
+    float r0, g0, b0; // 0 0
+    float r1, g1, b1; // 0 1
+    float r2, g2, b2; // 1 0
+    float r3, g3, b3; // 1 1
   };
+
+  struct Vec4 { float x,y,z,w; };
+
+  struct CsGPU {
+    Vec4 Cred[16];
+    Vec4 Cgreen[16];
+    Vec4 Cblue[16];
+  };
+
   int resolution = 40;
   bool curveControl = false;
   bool controlNetOnly = false;
@@ -31,6 +45,7 @@ private:
   void buildPatchMesh();
 
   QOpenGLShaderProgram shader;
+  QOpenGLShaderProgram shaderNet;
 
   QOpenGLVertexArrayObject m_vaoPatch;
   QOpenGLBuffer            m_vboPatch;
@@ -43,4 +58,7 @@ private:
   int m_netPointVertexCount = 0; // GL_POINTS
 
   Mesh mesh;
+
+  GLuint CsHandle = 0;
+  int patchCount = 0;
 };

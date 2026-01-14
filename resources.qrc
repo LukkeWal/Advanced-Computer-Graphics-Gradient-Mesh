@@ -2,5 +2,9 @@
     <qresource prefix="/">
         <file>shaders/gradmesh.frag</file>
         <file>shaders/gradmesh.vert</file>
+        <file>shaders/gradmesh.tesc</file>
+        <file>shaders/gradmesh.tese</file>
+        <file>shaders/net.frag</file>
+        <file>shaders/net.vert</file>
     </qresource>
 </RCC>

@@ -1,6 +1,20 @@
 #include "mesh.h"
 #include "QDebug"
 
+std::array<std::array<ColorRGB, 4>, 4> Mesh::oneCol(ColorRGB col){
+  return {{
+      {{ col, col }},
+      {{ col, col }}
+  }};
+}
+
+std::array<std::array<ColorRGB, 4>, 4> Mesh::difCol(ColorRGB c0, ColorRGB c1, ColorRGB c2, ColorRGB c3){
+  return {{
+      {{ c0, c1 }},
+      {{ c2, c3 }}
+  }};
+}
+
 void Mesh::setBasicTestMesh(){
   m_rows = 2;
   m_cols = 2;
@@ -11,10 +25,10 @@ void Mesh::setBasicTestMesh(){
   P10.pos = Vec2(1, 0);
   P11.pos = Vec2(1, 1);
 
-  P00.col = ColorRGB(1, 0, 0);
-  P01.col = ColorRGB(0, 1, 0);
-  P10.col = ColorRGB(0, 0, 1);
-  P11.col = ColorRGB(1, 1, 1);
+  P00.cols = oneCol(ColorRGB(1, 0, 0));
+  P01.cols = oneCol(ColorRGB(0, 1, 0));
+  P10.cols = oneCol(ColorRGB(0, 0, 1));
+  P11.cols = oneCol(ColorRGB(1, 1, 1));
 
   Vec2 Su = Vec2(1.0, 0.0);
   Vec2 Sv = Vec2(0.0, 1.0);
@@ -23,12 +37,6 @@ void Mesh::setBasicTestMesh(){
   P01.uPosTangent = Su;  P01.vPosTangent = Sv;
   P10.uPosTangent = Su;  P10.vPosTangent = Sv;
   P11.uPosTangent = Su;  P11.vPosTangent = Sv;
-
-  // for now, set colour tangents to something simple, e.g. zero:
-  P00.uColTangent = P00.vColTangent = ColorRGB(0,0,0);
-  P01.uColTangent = P01.vColTangent = ColorRGB(0,0,0);
-  P10.uColTangent = P10.vColTangent = ColorRGB(0,0,0);
-  P11.uColTangent = P11.vColTangent = ColorRGB(0,0,0);
 
   // qDebug() << "P00: " << P00.print();
   // qDebug() << "P01: " << P01.print();
@@ -58,15 +66,45 @@ void Mesh::setPaperTestMesh()
 
       ControlPoint cp;
       cp.pos = Vec2(u, v);
-      cp.col = ColorRGB(0, 0, 0);
+      cp.cols = oneCol(ColorRGB(0, 0, 0));
       if (r == 1 && c == 1)
-        cp.col = ColorRGB(1, 1, 1);
+        cp.cols = oneCol(ColorRGB(1, 1, 1));
       if(r == 0 && c == 3)
-        cp.col = ColorRGB(1, 0, 0);
+        cp.cols = oneCol(ColorRGB(1, 0, 0));
       if(r == 1 && c == 3)
-        cp.col = ColorRGB(0, 1, 0);
+        cp.cols = oneCol(ColorRGB(0, 1, 0));
       if(r == 2 && c == 3)
-        cp.col = ColorRGB(0, 0, 1);
+        cp.cols = oneCol(ColorRGB(0, 0, 1));
+      points[r][c] = cp;
+    }
+  }
+  updateDerivatives();
+}
+
+void Mesh::setSharpMesh()
+{
+  m_rows = 3;
+  m_cols = 4;
+  points.assign(m_rows, std::vector<ControlPoint>(m_cols));
+  for (int r = 0; r < m_rows; ++r)
+  {
+    for (int c = 0; c < m_cols; ++c)
+    {
+      double u = (m_cols == 1) ? 0.0 : static_cast<double>(c) / (m_cols - 1);
+      double v = (m_rows == 1) ? 0.0 : static_cast<double>(r) / (m_rows - 1);
+
+      ControlPoint cp;
+      cp.pos = Vec2(u, v);
+
+      ColorRGB green = ColorRGB(0, 1, 0);
+      ColorRGB gray = ColorRGB(0.5, 0.5, 0.5);
+
+      if (r == 1 && c == 1)
+        cp.cols = difCol(gray, gray, green, green);
+      else if (r == 1 && c == 2)
+        cp.cols = difCol(gray, gray, green, gray);
+      else
+        cp.cols = oneCol(gray);
       points[r][c] = cp;
     }
   }
@@ -81,7 +119,7 @@ void Mesh::updateDerivatives()
   const double tangentScale = 1.0;
   const double colourTangentScale = 0;
 
-  // Horizontal (v direction)
+  // (v direction)
   for (int r = 0; r < m_rows; ++r)
   {
     for (int c = 0; c < m_cols; ++c)
@@ -101,7 +139,7 @@ void Mesh::updateDerivatives()
     }
   }
 
-  // Horizontal (u direction)
+  // (u direction)
   for (int c = 0; c < m_cols; ++c)
   {
     for (int r = 0; r < m_rows; ++r)
@@ -118,46 +156,6 @@ void Mesh::updateDerivatives()
           du = 0.5 * (points[r + 1][c].pos - points[r - 1][c].pos);
       }
       points[r][c].uPosTangent = tangentScale * du;
-    }
-  }
-
-  // Vertical colour derivatives
-  for (int r = 0; r < m_rows; ++r)
-  {
-    for (int c = 0; c < m_cols; ++c)
-    {
-      ColorRGB dvC(0.0, 0.0, 0.0);
-
-      if (m_cols > 1)
-      {
-        if (c == 0)
-          dvC = points[r][1].col - points[r][0].col;
-        else if (c == m_cols - 1)
-          dvC = points[r][m_cols - 1].col - points[r][m_cols - 2].col;
-        else
-          dvC = 0.5 * (points[r][c + 1].col - points[r][c - 1].col);
-      }
-      points[r][c].vColTangent = colourTangentScale * dvC;
-    }
-  }
-
-  // Horizontal colour derivatives
-  for (int c = 0; c < m_cols; ++c)
-  {
-    for (int r = 0; r < m_rows; ++r)
-    {
-      ColorRGB duC(0.0, 0.0, 0.0);
-
-      if (m_rows > 1)
-      {
-        if (r == 0)
-          duC = points[1][c].col - points[0][c].col;
-        else if (r == m_rows - 1)
-          duC = points[m_rows - 1][c].col - points[m_rows - 2][c].col;
-        else
-          duC = 0.5 * (points[r + 1][c].col - points[r - 1][c].col);
-      }
-      points[r][c].uColTangent = colourTangentScale * duC;
     }
   }
 }
@@ -200,13 +198,11 @@ void Mesh::setAppleMesh()
     {
       ControlPoint cp;
       cp.pos = p[r][c];
-      cp.col = C[r][c];
+      cp.cols = oneCol(C[r][c]);
 
       // If your ControlPoint constructor doesn’t initialize these, make them explicit:
       cp.uPosTangent = Vec2(0.0, 0.0);
       cp.vPosTangent = Vec2(0.0, 0.0);
-      cp.uColTangent = ColorRGB(0.0, 0.0, 0.0);
-      cp.vColTangent = ColorRGB(0.0, 0.0, 0.0);
 
       points[r][c] = cp;
     }

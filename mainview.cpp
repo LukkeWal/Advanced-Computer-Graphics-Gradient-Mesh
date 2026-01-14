@@ -32,6 +32,10 @@ void MainView::meshChanged(MeshPreset selectedMesh)
     m_mesh.setAppleMesh();
     meshRenderer.setMesh(m_mesh);
   }
+  if (selectedMesh == MeshPreset::SHARP){
+    m_mesh.setSharpMesh();
+    meshRenderer.setMesh(m_mesh);
+  }
   update();
 }
 

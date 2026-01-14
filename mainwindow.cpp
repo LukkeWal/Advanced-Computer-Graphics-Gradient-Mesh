@@ -22,6 +22,8 @@ void MainWindow::on_PresetSelect_currentIndexChanged(int index){
     ui->MainDisplay->meshChanged(MeshPreset::BASIC);
   if (index == 2)
     ui->MainDisplay->meshChanged(MeshPreset::APPLE);
+  if (index == 3)
+    ui->MainDisplay->meshChanged(MeshPreset::SHARP);
 }
 
 void MainWindow::on_Resolution_valueChanged(int value){
