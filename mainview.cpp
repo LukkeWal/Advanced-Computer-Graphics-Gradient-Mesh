@@ -66,73 +66,77 @@ void MainView::paintGL()
 
 void MainView::mousePressEvent(QMouseEvent *event)
 {
-  if (event->button() != Qt::LeftButton)
-    return;
+    if (event->button() != Qt::LeftButton) return;
 
-  QPointF p = event->position(); // Qt6; use event->pos() for Qt5
-  float mouseX = static_cast<float>(p.x());
-  float mouseY = static_cast<float>(p.y());
+    QPointF p = event->position();
+    float mouseX = p.x();
+    float mouseY = p.y();
 
-  int bestRow = -1;
-  int bestCol = -1;
-  float bestDist2 = m_pickRadiusPx * m_pickRadiusPx;
+    m_selectedRow = -1;
+    m_selectedCol = -1;
+    m_selectionType = SelectionType::NONE;
 
-  for (int r = 0; r < m_mesh.rows(); ++r)
-  {
-    for (int c = 0; c < m_mesh.cols(); ++c)
-    {
-      const ControlPoint& cp = m_mesh.points[r][c];
+    float bestDist2 = m_pickRadiusPx * m_pickRadiusPx;
+    const float handleScale = 1.0f / 5.0f; // Must match renderer.cpp
 
-      float sx = static_cast<float>(cp.pos.x) * width();
-      float sy = (1.0f - static_cast<float>(cp.pos.y)) * height();
+    for (int r = 0; r < m_mesh.rows(); ++r) {
+        for (int c = 0; c < m_mesh.cols(); ++c) {
+            const ControlPoint& cp = m_mesh.points[r][c];
 
-      float dx = mouseX - sx;
-      float dy = mouseY - sy;
-      float d2 = dx*dx + dy*dy;
+            auto toScreen = [&](Vec2 worldPos) {
+                return QPointF(worldPos.x * width(), (1.0 - worldPos.y) * height());
+            };
 
-      if (d2 < bestDist2)
-      {
-        bestDist2 = d2;
-        bestRow = r;
-        bestCol = c;
-      }
+            // 1. Check Position
+            QPointF sPos = toScreen(cp.pos);
+            float d2 = QPointF::dotProduct(sPos - p, sPos - p);
+            if (d2 < bestDist2) {
+                bestDist2 = d2; m_selectedRow = r; m_selectedCol = c;
+                m_selectionType = SelectionType::POSITION;
+            }
+
+            // 2. Check U Tangent Handle
+            QPointF sUTan = toScreen(cp.pos + cp.uPosTangent * handleScale);
+            d2 = QPointF::dotProduct(sUTan - p, sUTan - p);
+            if (d2 < bestDist2) {
+                bestDist2 = d2; m_selectedRow = r; m_selectedCol = c;
+                m_selectionType = SelectionType::U_TANGENT;
+            }
+
+            // 3. Check V Tangent Handle
+            QPointF sVTan = toScreen(cp.pos + cp.vPosTangent * handleScale);
+            d2 = QPointF::dotProduct(sVTan - p, sVTan - p);
+            if (d2 < bestDist2) {
+                bestDist2 = d2; m_selectedRow = r; m_selectedCol = c;
+                m_selectionType = SelectionType::V_TANGENT;
+            }
+        }
     }
-  }
-
-  m_selectedRow = bestRow;
-  m_selectedCol = bestCol;
 }
 
 void MainView::mouseMoveEvent(QMouseEvent *event)
 {
-  if (!(event->buttons() & Qt::LeftButton))
-    return;
+    if (!(event->buttons() & Qt::LeftButton) || m_selectedRow < 0) return;
 
-  if (m_selectedRow < 0 || m_selectedCol < 0)
-    return;
+    double wx = event->position().x() / width();
+    double wy = 1.0 - (event->position().y() / height());
 
-  QPointF p = event->position();
-  double x = p.x();
-  double y = p.y();
+    ControlPoint& cp = m_mesh.points[m_selectedRow][m_selectedCol];
+    const float handleScale = 1.0f / 5.0f;
 
-  // screen -> world
-  double wx = x / static_cast<double>(width());
-  double wy = 1.0 - y / static_cast<double>(height());
+    if (m_selectionType == SelectionType::POSITION) {
+        cp.pos = Vec2(wx, wy);
+    }
+    else if (m_selectionType == SelectionType::U_TANGENT) {
+        // Calculate new tangent based on vector from point to mouse
+        cp.uPosTangent = (Vec2(wx, wy) - cp.pos) * (1.0 / handleScale);
+    }
+    else if (m_selectionType == SelectionType::V_TANGENT) {
+        cp.vPosTangent = (Vec2(wx, wy) - cp.pos) * (1.0 / handleScale);
+    }
 
-  // clamp a bit so we stay in visible region
-  if (wx < 0.0) wx = 0.0;
-  if (wx > 1.0) wx = 1.0;
-  if (wy < 0.0) wy = 0.0;
-  if (wy > 1.0) wy = 1.0;
-
-  ControlPoint& cp = m_mesh.points[m_selectedRow][m_selectedCol];
-  cp.pos.x = wx;
-  cp.pos.y = wy;
-
-  // Rebuild geometry
-  m_mesh.updateDerivatives();
-  meshRenderer.setMesh(m_mesh);
-  update();
+    meshRenderer.setMesh(m_mesh);
+    update();
 }
 
 void MainView::mouseReleaseEvent(QMouseEvent *event)

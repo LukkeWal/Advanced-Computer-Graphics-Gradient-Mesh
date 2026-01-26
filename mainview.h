@@ -33,6 +33,8 @@ protected:
 private:
   renderer meshRenderer;
   Mesh m_mesh;
+  enum class SelectionType { NONE, POSITION, U_TANGENT, V_TANGENT };
+  SelectionType m_selectionType = SelectionType::NONE;
 
   // Selection
   int   m_selectedRow = -1;

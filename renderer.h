@@ -56,6 +56,7 @@ private:
   QOpenGLBuffer            m_vboNet;
   int m_netLineVertexCount  = 0; // GL_LINES
   int m_netPointVertexCount = 0; // GL_POINTS
+  int m_tangentHandleVertexCount = 0; //GL_LINES
 
   Mesh mesh;
 

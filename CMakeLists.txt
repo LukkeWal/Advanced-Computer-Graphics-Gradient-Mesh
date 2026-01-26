@@ -32,6 +32,9 @@ qt_add_executable(GradMesh WIN32 MACOSX_BUNDLE
     MeshPresets.h
 
 )
+
+find_package(OpenGL REQUIRED)
+
 target_link_libraries(GradMesh PRIVATE
     Qt::Core
     Qt::Gui
@@ -42,6 +45,7 @@ if((QT_VERSION_MAJOR GREATER 5))
         Qt::OpenGL
         Qt::OpenGLWidgets
         Qt::Widgets
+        ${OPENGL_LIBRARIES}
     )
 endif()
 

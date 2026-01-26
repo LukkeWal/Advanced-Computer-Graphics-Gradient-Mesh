@@ -292,6 +292,60 @@ void renderer::buildControlNetMesh()
     }
   }
   m_netPointVertexCount = mesh.rows() * mesh.cols();
+  // Add tangent handles
+  const float handleScale = 1.0f / 5.0f; // Scale factor for tangent visualization
+
+  for (int r = 0; r < mesh.rows(); ++r)
+  {
+    for (int c = 0; c < mesh.cols(); ++c)
+      {
+          const ControlPoint& p = mesh.points[r][c];
+          float px = static_cast<float>(p.pos.x);
+          float py = static_cast<float>(p.pos.y);
+
+          // Horizontal tangent (right)
+          if (c < mesh.cols() - 1)
+          {
+              float tx = static_cast<float>(p.pos.x + p.uPosTangent.x * handleScale);
+              float ty = static_cast<float>(p.pos.y + p.uPosTangent.y * handleScale);
+              vertices.push_back(white(px, py));
+              vertices.push_back(white(tx, ty));
+          }
+
+          // Vertical tangent (up)
+          if (r < mesh.rows() - 1)
+          {
+              float tx = static_cast<float>(p.pos.x + p.vPosTangent.x * handleScale);
+              float ty = static_cast<float>(p.pos.y + p.vPosTangent.y * handleScale);
+              vertices.push_back(white(px, py));
+              vertices.push_back(white(tx, ty));
+          }
+
+          // INCOMING tangents (from left and top neighbors)
+
+          // Horizontal incoming tangent (from left neighbor, if exists)
+          if (c > 0)
+          {
+              const ControlPoint& left = mesh.points[r][c-1];
+              float tx = static_cast<float>(p.pos.x - p.uPosTangent.x * handleScale);
+              float ty = static_cast<float>(p.pos.y - p.uPosTangent.y * handleScale);
+              vertices.push_back(white(px, py));
+              vertices.push_back(white(tx, ty));
+          }
+
+          // Vertical incoming tangent (from top neighbor, if exists)
+          if (r > 0)
+          {
+              const ControlPoint& top = mesh.points[r-1][c];
+              float tx = static_cast<float>(p.pos.x - p.vPosTangent.x * handleScale);
+              float ty = static_cast<float>(p.pos.y - p.vPosTangent.y * handleScale);
+              vertices.push_back(white(px, py));
+              vertices.push_back(white(tx, ty));
+          }
+      }
+  }
+  m_tangentHandleVertexCount = static_cast<int>(vertices.size() - m_netLineVertexCount - m_netPointVertexCount);
+
 
   // Upload to GPU
   m_vaoNet.bind();
@@ -377,7 +431,10 @@ void renderer::draw(){
   glDrawArrays(GL_LINES, 0, m_netLineVertexCount);
   shaderNet.setUniformValue("uIsPoint", 1);
   glDrawArrays(GL_POINTS, m_netLineVertexCount, m_netPointVertexCount);
+  // Draw tangent handles with different color/style
+  shaderNet.setUniformValue("uIsPoint", 0);
 
+  glDrawArrays(GL_LINES, m_netLineVertexCount + m_netPointVertexCount, m_tangentHandleVertexCount);
   m_vaoNet.release();
   shaderNet.release();
 }
