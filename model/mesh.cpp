@@ -200,7 +200,6 @@ void Mesh::setAppleMesh()
       cp.pos = p[r][c];
       cp.cols = oneCol(C[r][c]);
 
-      // If your ControlPoint constructor doesn’t initialize these, make them explicit:
       cp.uPosTangent = Vec2(0.0, 0.0);
       cp.vPosTangent = Vec2(0.0, 0.0);
 

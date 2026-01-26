@@ -2,7 +2,7 @@
 #define MESHPRESETS_H
 
 /**
- * @brief Represents the different shaders that exist in this program.
+ * @brief Represents the different preset meshes that exist in this program.
  */
 enum MeshPreset { PAPER, BASIC, APPLE, SHARP };
 

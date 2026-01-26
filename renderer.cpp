@@ -58,13 +58,11 @@ void renderer::initializeGL()
   const bool ok = initializeOpenGLFunctions();
   qDebug() << "initializeOpenGLFunctions() =" << ok;
 
-  // SSBO handle for patch coefficients
   glGenBuffers(1, &CsHandle);
 
   glEnable(GL_DEPTH_TEST);
   glDisable(GL_CULL_FACE);
 
-  // Needed if your vertex shader sets gl_PointSize
   glEnable(GL_PROGRAM_POINT_SIZE);
 
   m_vaoPatch.create();
@@ -292,8 +290,7 @@ void renderer::buildControlNetMesh()
     }
   }
   m_netPointVertexCount = mesh.rows() * mesh.cols();
-  // Add tangent handles
-  const float handleScale = 1.0f / 5.0f; // Scale factor for tangent visualization
+  const float handleScale = 1.0f / 5.0f; 
 
   for (int r = 0; r < mesh.rows(); ++r)
   {
@@ -321,9 +318,6 @@ void renderer::buildControlNetMesh()
               vertices.push_back(white(tx, ty));
           }
 
-          // INCOMING tangents (from left and top neighbors)
-
-          // Horizontal incoming tangent (from left neighbor, if exists)
           if (c > 0)
           {
               const ControlPoint& left = mesh.points[r][c-1];
@@ -333,7 +327,6 @@ void renderer::buildControlNetMesh()
               vertices.push_back(white(tx, ty));
           }
 
-          // Vertical incoming tangent (from top neighbor, if exists)
           if (r > 0)
           {
               const ControlPoint& top = mesh.points[r-1][c];
@@ -431,7 +424,6 @@ void renderer::draw(){
   glDrawArrays(GL_LINES, 0, m_netLineVertexCount);
   shaderNet.setUniformValue("uIsPoint", 1);
   glDrawArrays(GL_POINTS, m_netLineVertexCount, m_netPointVertexCount);
-  // Draw tangent handles with different color/style
   shaderNet.setUniformValue("uIsPoint", 0);
 
   glDrawArrays(GL_LINES, m_netLineVertexCount + m_netPointVertexCount, m_tangentHandleVertexCount);

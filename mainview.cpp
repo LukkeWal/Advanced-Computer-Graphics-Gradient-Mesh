@@ -77,7 +77,7 @@ void MainView::mousePressEvent(QMouseEvent *event)
     m_selectionType = SelectionType::NONE;
 
     float bestDist2 = m_pickRadiusPx * m_pickRadiusPx;
-    const float handleScale = 1.0f / 5.0f; // Must match renderer.cpp
+    const float handleScale = 1.0f / 5.0f; 
 
     for (int r = 0; r < m_mesh.rows(); ++r) {
         for (int c = 0; c < m_mesh.cols(); ++c) {
@@ -87,7 +87,6 @@ void MainView::mousePressEvent(QMouseEvent *event)
                 return QPointF(worldPos.x * width(), (1.0 - worldPos.y) * height());
             };
 
-            // 1. Check Position
             QPointF sPos = toScreen(cp.pos);
             float d2 = QPointF::dotProduct(sPos - p, sPos - p);
             if (d2 < bestDist2) {
@@ -95,7 +94,6 @@ void MainView::mousePressEvent(QMouseEvent *event)
                 m_selectionType = SelectionType::POSITION;
             }
 
-            // 2. Check U Tangent Handle
             QPointF sUTan = toScreen(cp.pos + cp.uPosTangent * handleScale);
             d2 = QPointF::dotProduct(sUTan - p, sUTan - p);
             if (d2 < bestDist2) {
@@ -103,7 +101,6 @@ void MainView::mousePressEvent(QMouseEvent *event)
                 m_selectionType = SelectionType::U_TANGENT;
             }
 
-            // 3. Check V Tangent Handle
             QPointF sVTan = toScreen(cp.pos + cp.vPosTangent * handleScale);
             d2 = QPointF::dotProduct(sVTan - p, sVTan - p);
             if (d2 < bestDist2) {
@@ -128,7 +125,6 @@ void MainView::mouseMoveEvent(QMouseEvent *event)
         cp.pos = Vec2(wx, wy);
     }
     else if (m_selectionType == SelectionType::U_TANGENT) {
-        // Calculate new tangent based on vector from point to mouse
         cp.uPosTangent = (Vec2(wx, wy) - cp.pos) * (1.0 / handleScale);
     }
     else if (m_selectionType == SelectionType::V_TANGENT) {
